@@ -17,6 +17,13 @@ variable "labels" {
 variable "src_bucket" {
   description = "The name of the bucket to hold the source code (zipped)"
   type        = string
+  default     = ""
+}
+
+variable "src_archive_name" {
+  description = "(Optional) The name of the archive file to write to the bucket"
+  type        = string
+  default     = ""
 }
 
 variable "storage_class" {

@@ -9,8 +9,14 @@ resource "google_project_service" "cloudbuild" {
   service = "cloudbuild.googleapis.com"
 }
 
+data "archive_file" "python_source" {
+  type        = "zip"
+  source_dir  = var.src_path
+  output_path = var.output_path != "" ? var.output_path : "${var.src_path}.zip"
+}
+
 resource "google_storage_bucket" "code_bucket" {
-  name                        = var.src_bucket
+  name                        = var.src_bucket != "" ? var.src_bucket : "${var.project}-src-code"
   location                    = var.region
   project                     = var.project
   storage_class               = var.storage_class
@@ -18,14 +24,8 @@ resource "google_storage_bucket" "code_bucket" {
   labels                      = var.labels
 }
 
-data "archive_file" "python_source" {
-  type        = "zip"
-  source_dir  = var.src_path
-  output_path = var.output_path != "" ? var.output_path : "${var.src_path}.zip"
-}
-
 resource "google_storage_bucket_object" "archive" {
-  name   = data.archive_file.python_source.output_path
+  name   = var.src_archive_name != "" ? var.src_archive_name : basename(data.archive_file.python_source.output_path)
   bucket = google_storage_bucket.code_bucket.name
   source = data.archive_file.python_source.output_path
 }
