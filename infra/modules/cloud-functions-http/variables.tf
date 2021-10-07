@@ -20,12 +20,6 @@ variable "src_bucket" {
   default     = ""
 }
 
-variable "src_archive_name" {
-  description = "(Optional) The name of the archive file to write to the bucket"
-  type        = string
-  default     = ""
-}
-
 variable "storage_class" {
   description = "(Optional) Storage class for the bucket"
   type        = string
@@ -43,10 +37,10 @@ variable "src_path" {
   type        = string
 }
 
-variable "output_path" {
+variable "output_dir" {
   description = "(Optional) path to final archive file"
   type        = string
-  default     = ""
+  default     = "../"
 }
 
 variable "runtime" {
@@ -69,4 +63,10 @@ variable "description" {
   description = "(Optional) Description of the function"
   type        = string
   default     = ""
+}
+
+variable "available_memory_mb" {
+  description = "(Optional) Available RAM for the function"
+  type        = number
+  default     = 128
 }

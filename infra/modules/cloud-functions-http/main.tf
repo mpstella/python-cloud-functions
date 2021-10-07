@@ -1,22 +1,34 @@
+locals {
+  now          = formatdate("YYYYMMDD_hhmmss", timestamp())
+  zip_filename = "${var.name}-${local.now}.zip"
+  output_path  = "${var.output_dir}/${local.zip_filename}"
+  bucket_name  = var.src_bucket != "" ? var.src_bucket : "${var.project}-src-code"
+}
 
 resource "google_project_service" "cloudfunctions" {
   project = var.project
   service = "cloudfunctions.googleapis.com"
+
+  disable_dependent_services = true
+  disable_on_destroy         = false
 }
 
 resource "google_project_service" "cloudbuild" {
   project = var.project
   service = "cloudbuild.googleapis.com"
+
+  disable_dependent_services = true
+  disable_on_destroy         = false
 }
 
 data "archive_file" "python_source" {
   type        = "zip"
   source_dir  = var.src_path
-  output_path = var.output_path != "" ? var.output_path : "${var.src_path}.zip"
+  output_path = local.output_path
 }
 
 resource "google_storage_bucket" "code_bucket" {
-  name                        = var.src_bucket != "" ? var.src_bucket : "${var.project}-src-code"
+  name                        = local.bucket_name
   location                    = var.region
   project                     = var.project
   storage_class               = var.storage_class
@@ -25,7 +37,7 @@ resource "google_storage_bucket" "code_bucket" {
 }
 
 resource "google_storage_bucket_object" "archive" {
-  name   = var.src_archive_name != "" ? var.src_archive_name : basename(data.archive_file.python_source.output_path)
+  name   = "${var.name}/${basename(data.archive_file.python_source.output_path)}"
   bucket = google_storage_bucket.code_bucket.name
   source = data.archive_file.python_source.output_path
 }
@@ -37,7 +49,7 @@ resource "google_cloudfunctions_function" "function" {
   project     = var.project
   region      = var.region
 
-  available_memory_mb   = 128
+  available_memory_mb   = var.available_memory_mb
   source_archive_bucket = google_storage_bucket.code_bucket.name
   source_archive_object = google_storage_bucket_object.archive.name
   trigger_http          = true
@@ -51,10 +63,14 @@ resource "google_cloudfunctions_function" "function" {
 
 # IAM entry for all users to invoke the function
 resource "google_cloudfunctions_function_iam_member" "invoker" {
-  project        = google_cloudfunctions_function.function.project
-  region         = google_cloudfunctions_function.function.region
-  cloud_function = google_cloudfunctions_function.function.name
+  project        = var.project
+  region         = var.region
+  cloud_function = var.name
 
   role   = "roles/cloudfunctions.invoker"
   member = "allUsers"
+
+  depends_on = [
+    google_cloudfunctions_function.function
+  ]
 }
